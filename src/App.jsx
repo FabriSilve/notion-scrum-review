@@ -1,3 +1,4 @@
+import { useState, useCallback } from 'react';
 import {
   Card,
   Grid,
@@ -9,17 +10,20 @@ import {
   BarChart,
   DonutChart,
   Legend,
+  Subtitle,
+  TextInput,
+  Button,
 } from "@tremor/react";
+import {
+  KeyIcon,
+  DatabaseIcon,
+  RefreshIcon,
+} from "@heroicons/react/solid";
 
 import KpiCard from "./componenst/KpiCard";
 
-// import resolveConfig from 'tailwindcss/resolveConfig'
-// import tailwindConfig from '../tailwind.config.js'
-
-// const { theme } = resolveConfig(tailwindConfig)
-
-export default function Example() {
-  const kpiCards = [{
+const getDemoData = () => ({
+  kpiCards: [{
     label: "Features",
     value: 68,
     increase: 10.2,
@@ -43,9 +47,8 @@ export default function Example() {
     increase: 40.3,
     start: 40,
     end: 64,
-  }];
-
-  const sprintFocus = [{
+  }],
+  sprintFocus: [{
     name: "Factoring",
     value: 34,
     color: 'green',
@@ -65,14 +68,8 @@ export default function Example() {
     name: "21Grams",
     value: 3,
     color: 'purple',
-  }];
-
-  // const workBreakdown = [{
-  //   features: 48,
-  //   bugs: 30,
-  //   "tech debt": 12,
-  // }];
-  const workBreakdown = [{
+  }],
+  workBreakdown: [{
     name: "Features",
     points: 48,
   }, {
@@ -81,18 +78,16 @@ export default function Example() {
   }, {
     name: "Bugs",
     points: 30,
-  }]
-
-  const planningBreakdown = [{
+  }],
+  planningBreakdown: [{
     name: "Planned",
     points: 60,
   },
   {
     name: "Unplanned",
     points: 30,
-  }];
-
-  const sprintHistory = [{
+  }],
+  sprintHistory: [{
     name: "Sprint #22",
     "Features": 49,
     "Tech Debt": 19,
@@ -176,11 +171,105 @@ export default function Example() {
     "Tech Debt": 20,
     "Bugs": 5,
     "Unplanned": 25,
-  }];
+  }],
+})
+
+export default function Example() {
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [token, setToken] = useState('');
+  const [database, setDatabase] = useState('');
+
+
+  const [kpiCards, setKpiCards] = useState();
+  const [sprintFocus, setSprintFocus] = useState();
+  const [workBreakdown, setWorkBreakdown] = useState();
+  const [planningBreakdown, setPlanningBreakdown] = useState();
+  const [sprintHistory, setSprintHistory] = useState();
+
+  const onDemoClick = useCallback((event) => {
+    event.preventDefault();
+    const demoData = getDemoData();
+    setKpiCards(demoData.kpiCards);
+    setSprintFocus(demoData.sprintFocus);
+    setWorkBreakdown(demoData.workBreakdown);
+    setPlanningBreakdown(demoData.planningBreakdown);
+    setSprintHistory(demoData.sprintHistory);
+    setDataLoaded(true);
+  }, [])
+
+  const onRefreshClick = useCallback((event) => {
+    event.preventDefault();
+    setDataLoaded(false);
+  }, [])
+
+  if (!dataLoaded) {
+    return (
+      <Flex
+        className='h-5/6 w-full'
+        alignItems='center'
+        flexDirection='col'
+      >
+        <Flex className='w-1/3 my-28'>
+          <Card>
+            <Flex
+              alignItems='center'
+              flexDirection='col'
+            >
+              <Title>Notion Dashboard</Title>
+              <Subtitle>Add your Notion&apos;s IDs to populate the dashboard</Subtitle>
+              <TextInput
+                className="mt-6"
+                icon={KeyIcon}
+                placeholder="Token ID"
+                value={token}
+                onChange={(event) => setToken(event.target.value)}
+              />
+              <TextInput
+                className="mt-6"
+                icon={DatabaseIcon}
+                placeholder="Database ID"
+                value={database}
+                onChange={(event) => setDatabase(event.target.value)}
+              />
+              <Flex
+                className="mt-12 w-full"
+                alignItems='center'
+                justifyContent='around'
+              >
+                <Button
+                  size="md"
+                >
+                  Connect
+                </Button>
+                <Button
+                  size="md"
+                  variant='secondary'
+                  onClick={onDemoClick}
+                >
+                  Demo
+                </Button>
+              </Flex>
+            </Flex>
+          </Card>
+        </Flex>
+      </Flex>
+    )
+  }
 
   return (
     <main>
-      <Title>Review Sprint #36</Title>
+      <Flex
+        flexDirection='row'
+        justifyContent='between'
+      >
+        <Title>Review Sprint #36</Title>
+        <Button
+          icon={RefreshIcon}
+          onClick={onRefreshClick}
+        >
+          Refresh data
+        </Button>
+      </Flex>
 
       <Grid numItemsMd={2} numItemsLg={4} className="gap-6 mt-3">
         {kpiCards.map((card) => (
@@ -196,7 +285,7 @@ export default function Example() {
       </Grid>
       <Grid numItemsMd={1} numItemsLg={4} className="grid-cols-4 gap-6 mt-3">
         <Card className="col-span-2">
-          <Flex className="mt-4">
+          <Flex>
             <Text>
               <Bold>Topics</Bold>
             </Text>
@@ -204,16 +293,9 @@ export default function Example() {
               <Bold>Points</Bold>
             </Text>
           </Flex>
-          <BarList data={sprintFocus} className="mt-2" />
+          <BarList data={sprintFocus} />
         </Card>
         <Card className="col-span-1">
-          {/* <BarChart
-            className="h-full"
-            data={workBreakdown}
-            index="name"
-            categories={["features", "bugs", "tech debt"]}
-            colors={["blue", "red", "orange"]}
-          /> */}
           <Flex
             flexDirection="col"
             alignItems="center"
@@ -231,7 +313,6 @@ export default function Example() {
               index="name"
               valueFormatter={(number) => `${Intl.NumberFormat("se").format(number).toString()} pt.`}
               colors={["blue", "orange", "yellow"]}
-              fontSize
             />
           </Flex>
         </Card>
