@@ -216,7 +216,7 @@ export default function Example() {
               flexDirection='col'
             >
               <Title>Notion Dashboard</Title>
-              <Subtitle>Add your Notion&apos;s IDs to populate the dashboard</Subtitle>
+              <Subtitle className='text-center'>Add your Notion&apos;s IDs to populate the dashboard</Subtitle>
               <TextInput
                 className="mt-6"
                 icon={KeyIcon}
@@ -283,7 +283,7 @@ export default function Example() {
           />
         ))}
       </Grid>
-      <Grid numItemsMd={1} numItemsLg={4} className="grid-cols-4 gap-6 mt-3">
+      <Grid numItemsMd={1} numItemsLg={4} className="gap-6 mt-3">
         <Card className="col-span-2">
           <Flex>
             <Text>
