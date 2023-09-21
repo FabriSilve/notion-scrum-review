@@ -7,5 +7,6 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
     outDir: './build'
-  }
+  },
+  base: "/notion-scrum-review/"
 })
