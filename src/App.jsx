@@ -192,6 +192,7 @@ export default function Example() {
   const [planningBreakdown, setPlanningBreakdown] = useState();
   const [sprintHistory, setSprintHistory] = useState();
 
+
   const onDemoClick = useCallback((event) => {
     event.preventDefault();
     setIsLoading(true)
@@ -225,6 +226,18 @@ export default function Example() {
     (async () => {
       try {
         setIsLoading(true);
+
+        fetch(`http://localhost:7000/${token}/${database}/query`, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              accept: 'application/json',
+            }
+          })
+          .then(response => console.log(response))
+          .catch(err => console.error(err));
+
+
         const demoData = getDemoData();
         setKpiCards(demoData.kpiCards);
         setSprintFocus(demoData.sprintFocus);
