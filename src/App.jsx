@@ -221,6 +221,25 @@ export default function Example() {
     event.preventDefault();
     Cookies.set('token', token, { expires: 30 });
     Cookies.set('database', database, { expires: 30 });
+
+    (async () => {
+      try {
+        setIsLoading(true);
+        const demoData = getDemoData();
+        setKpiCards(demoData.kpiCards);
+        setSprintFocus(demoData.sprintFocus);
+        setWorkBreakdown(demoData.workBreakdown);
+        setPlanningBreakdown(demoData.planningBreakdown);
+        setSprintHistory(demoData.sprintHistory);
+
+
+        setHasData(true);
+      } catch (error) {
+        setIsError(true);
+      } finally {
+        setIsLoading(false);
+      }
+    })();
   }, [token, database])
 
   if (!hasData && !isLoading) {
