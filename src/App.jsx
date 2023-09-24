@@ -1,3 +1,4 @@
+import Cookies from 'js-cookie';
 import { useState, useCallback } from 'react';
 import {
   Card,
@@ -175,10 +176,15 @@ const getDemoData = () => ({
 })
 
 export default function Example() {
-  const [dataLoaded, setDataLoaded] = useState(false);
-  const [token, setToken] = useState('');
-  const [database, setDatabase] = useState('');
+  const storedToken = Cookies.get('token');
+  const storedDatabase = Cookies.get('database');
 
+  const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [hasData, setHasData] = useState(false);
+
+  const [token, setToken] = useState(storedToken || '');
+  const [database, setDatabase] = useState(storedDatabase || '');
 
   const [kpiCards, setKpiCards] = useState();
   const [sprintFocus, setSprintFocus] = useState();
@@ -188,21 +194,36 @@ export default function Example() {
 
   const onDemoClick = useCallback((event) => {
     event.preventDefault();
+    setIsLoading(true)
     const demoData = getDemoData();
     setKpiCards(demoData.kpiCards);
     setSprintFocus(demoData.sprintFocus);
     setWorkBreakdown(demoData.workBreakdown);
     setPlanningBreakdown(demoData.planningBreakdown);
     setSprintHistory(demoData.sprintHistory);
-    setDataLoaded(true);
+    setHasData(true);
+    setIsLoading(false)
+    Cookies.remove('token');
+    Cookies.remove('database');
   }, [])
 
   const onRefreshClick = useCallback((event) => {
     event.preventDefault();
-    setDataLoaded(false);
+    setHasData(false);
+    setKpiCards(undefined);
+    setSprintFocus(undefined);
+    setWorkBreakdown(undefined);
+    setPlanningBreakdown(undefined);
+    setSprintHistory(undefined);
   }, [])
 
-  if (!dataLoaded) {
+  const onConnectClick = useCallback((event) => {
+    event.preventDefault();
+    Cookies.set('token', token, { expires: 30 });
+    Cookies.set('database', database, { expires: 30 });
+  }, [token, database])
+
+  if (!hasData && !isLoading) {
     return (
       <Flex
         className='h-5/6 w-full'
@@ -238,6 +259,7 @@ export default function Example() {
               >
                 <Button
                   size="md"
+                  onClick={onConnectClick}
                 >
                   Connect
                 </Button>
@@ -253,6 +275,18 @@ export default function Example() {
           </Card>
         </Flex>
       </Flex>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <>loading</>
+    )
+  }
+
+  if (isError) {
+    return (
+      <>has error</>
     )
   }
 
