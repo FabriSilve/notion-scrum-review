@@ -175,6 +175,12 @@ const getDemoData = () => ({
   }],
 })
 
+const URL = 'url';
+
+const parseData = (data) => {
+
+};
+
 export default function Example() {
   const storedToken = Cookies.get('token');
   const storedDatabase = Cookies.get('database');
@@ -223,20 +229,12 @@ export default function Example() {
     Cookies.set('token', token, { expires: 30 });
     Cookies.set('database', database, { expires: 30 });
 
-    (async () => {
-      try {
-        setIsLoading(true);
+    setIsLoading(true);
 
-        fetch(`http://localhost:7000/${token}/${database}/query`, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: {
-              accept: 'application/json',
-            }
-          })
-          .then(response => console.log(response))
-          .catch(err => console.error(err));
-
+    fetch(`${URL}/${token}/${database}`)
+      .then(response => response.json())
+      .then((jsonResponse) => {
+        const data = parseData(jsonResponse.res);
 
         const demoData = getDemoData();
         setKpiCards(demoData.kpiCards);
@@ -247,12 +245,13 @@ export default function Example() {
 
 
         setHasData(true);
-      } catch (error) {
-        setIsError(true);
-      } finally {
         setIsLoading(false);
-      }
-    })();
+      })
+      .catch(err => {
+        console.error(err);
+        setIsError(true);
+        setIsLoading(false);
+      });
   }, [token, database])
 
   if (!hasData && !isLoading) {
