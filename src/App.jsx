@@ -175,11 +175,191 @@ const getDemoData = () => ({
   }],
 })
 
-const URL = 'url';
+const URL = 'http://localhost:7000/query';
 
 const parseData = (data) => {
+  let totalSprintPoints = 0;
+  let featuresSprintPoints = 0;
+  let bugsSprintPoints = 0;
+  let techDebtSprintPoints = 0;
+  let unplannedSprintPoints = 0;
+  let plannedSprintPoints = 0;
+  const sprintFocusMap = {};
 
+  const sprintHistoryMap = {};
+  for (let ticket of data) {
+    const ticketProperties = ticket.properties || {};
+    const ticketPoints = ticketProperties.Points ? ticketProperties.Points.number || 0 : 0;
+    if (ticketPoints === 0) continue;
+
+    const ticketStatus = ticketProperties.Status.select.name || '';
+    const ticketLabels = (ticketProperties.Label.multi_select || []).map(({ name, color }) => ({ name, color }))
+
+    const ticketAnalysis = ticketLabels.reduce(
+      (res, label) => {
+        if (label.name === 'Unplanned') res.isUnplanned = true;
+        else if (label.name === 'Bug Fix') res.isBug = true;
+        else if (label.name === 'Tech Debt') res.isTechDebt = true;
+        else if (
+          label.name === 'Need help'
+          || label.name === 'Need refinement'
+          || label.name === 'Blocked'
+          || label.name === 'Back From Validation'
+          || label.name === 'Extended'
+          || label.name === 'Defect'
+        ) { /* nothing */ }
+        else {
+          res.sanitidesLabels.push(label);
+        }
+        return res;
+      },
+      {
+        isBug: false,
+        isTechDebt: false,
+        isUnplanned: false,
+        sanitidesLabels: [],
+      },
+    )
+
+    if (
+      ticketStatus === 'Done'
+      || ticketStatus === 'To Validate'
+      || ticketStatus === 'Validated'
+    ) {
+      totalSprintPoints += ticketPoints;
+      if (ticketAnalysis.isBug) bugsSprintPoints += ticketPoints;
+      if (ticketAnalysis.isTechDebt) techDebtSprintPoints += ticketPoints;
+      if (!ticketAnalysis.isBug && !ticketAnalysis.isTechDebt) featuresSprintPoints += ticketPoints;
+      if (ticketAnalysis.isUnplanned) unplannedSprintPoints += ticketPoints;
+      else plannedSprintPoints += ticketPoints;
+
+      for (let label of ticketAnalysis.sanitidesLabels) {
+        if (sprintFocusMap[label.name]) {
+          sprintFocusMap[label.name] = {
+            value: sprintFocusMap[label.name].value + ticketPoints,
+            color: sprintFocusMap[label.name].color,
+          }
+        } else {
+          sprintFocusMap[label.name] = {
+            value: ticketPoints,
+            color: label.color,
+          }
+        }
+      }
+    }
+
+    if (/^Done #/.test(ticketStatus)) {
+      console.log(ticketStatus, /^Done #([0-9]*)$/.exec(ticketStatus))
+      const sprintNumber = /^Done #([0-9]*)$/.exec(ticketStatus)[1];
+
+      const bug = ticketAnalysis.isBug ? ticketPoints : 0;
+      const techDebt = ticketAnalysis.isTechDebt ? ticketPoints : 0;
+      const feature = !ticketAnalysis.isBug && !ticketAnalysis.isTechDebt ? ticketPoints : 0;
+      const unplanned = ticketAnalysis.isUnplanned ? ticketPoints : 0;
+
+      if (sprintHistoryMap[`Sprint ${sprintNumber}`]) {
+        sprintHistoryMap[`Sprint ${sprintNumber}`] = {
+          "Features": sprintHistoryMap[`Sprint ${sprintNumber}`]['Features'] + feature,
+          "Tech Debt": sprintHistoryMap[`Sprint ${sprintNumber}`]['Tech Debt'] + techDebt,
+          "Bugs": sprintHistoryMap[`Sprint ${sprintNumber}`]['Bugs'] + bug,
+          "Unplanned": sprintHistoryMap[`Sprint ${sprintNumber}`]['Unplanned'] + unplanned,
+        }
+      } else {
+        sprintHistoryMap[`Sprint ${sprintNumber}`] = {
+          "Features": feature,
+          "Tech Debt": techDebt,
+          "Bugs": bug,
+          "Unplanned": unplanned,
+        }
+      }
+
+
+    }
+  }
+
+  const workBreakdown = [{
+    name: "Features",
+    points: featuresSprintPoints,
+  }, {
+    name: "Tech Debt",
+    points: techDebtSprintPoints,
+  }, {
+    name: "Bugs",
+    points: bugsSprintPoints,
+  }];
+  const planningBreakdown = [{
+      name: "Planned",
+      points: plannedSprintPoints,
+    },
+    {
+      name: "Unplanned",
+      points: unplannedSprintPoints,
+    }];
+  const sprintFocus = Object.entries(sprintFocusMap)
+    .map(
+      ([label, data]) => ({
+        name: label,
+        value: data.value,
+        color: data.color,
+      }))
+    .sort((a, b) => (a.value < b.value) ? 1 : ((b.value < a.value) ? -1 : 0))
+  const sprintHistory = Object.entries(sprintHistoryMap)
+    .map(
+      ([label, data]) => ({
+        name: label,
+        ...data,
+      }))
+    .sort((a, b) => (a.name > b.name) ? 1 : ((b.name > a.name) ? -1 : 0))
+  const lastSprint = sprintHistory[sprintHistory.length - 1];
+  const kpiCards = [{
+    label: "Features",
+    value: Math.round((featuresSprintPoints / totalSprintPoints) * 100),
+    increase: lastSprint['Features'] ? Math.round(((featuresSprintPoints / lastSprint['Features']) - 1) * 100) : 100,
+    start: featuresSprintPoints,
+    end: totalSprintPoints,
+  }, {
+    label: "Bugs",
+    value: Math.round((bugsSprintPoints / totalSprintPoints) * 100),
+    increase: lastSprint['Bugs'] ? Math.round(((bugsSprintPoints / lastSprint['Bugs']) - 1) * 100) : 100,
+    start: bugsSprintPoints,
+    end: totalSprintPoints,
+  }, {
+    label: "Tech Debt",
+    value: Math.round((techDebtSprintPoints / totalSprintPoints) * 100),
+    increase: lastSprint['Tech Debt'] ? Math.round(((techDebtSprintPoints / lastSprint['Tech Debt']) - 1) * 100) : 100,
+    start: techDebtSprintPoints,
+    end: totalSprintPoints,
+  }, {
+    label: "Unplanned",
+    value: Math.round((unplannedSprintPoints / totalSprintPoints) * 100),
+    increase: lastSprint['Unplanned'] ? Math.round(((unplannedSprintPoints / lastSprint['Unplanned']) - 1) * 100) : 100,
+    start: unplannedSprintPoints,
+    end: totalSprintPoints,
+  }];
+
+  return {
+    kpiCards,
+    workBreakdown,
+    planningBreakdown,
+    sprintFocus,
+    sprintHistory,
+  }
 };
+
+const fetchData = async (token, database, callback) => {
+  let data = await fetch(`${URL}/${token}/${database}`);
+  let result = await data.json();
+  let tickets = result.tickets;
+  let nextCursor = result.nextCursor
+  while (nextCursor) {
+    data = await fetch(`${URL}/${token}/${database}/${nextCursor}`);
+    result = await data.json();
+    tickets = tickets.concat(result.tickets);
+    nextCursor = result.nextCursor
+  }
+
+  callback(tickets);
+}
 
 export default function Example() {
   const storedToken = Cookies.get('token');
@@ -231,27 +411,23 @@ export default function Example() {
 
     setIsLoading(true);
 
-    fetch(`${URL}/${token}/${database}`)
-      .then(response => response.json())
-      .then((jsonResponse) => {
-        const data = parseData(jsonResponse.res);
+    fetchData(token, database, (tickets) => {
+      const data = parseData(tickets);
 
-        const demoData = getDemoData();
-        setKpiCards(demoData.kpiCards);
-        setSprintFocus(demoData.sprintFocus);
-        setWorkBreakdown(demoData.workBreakdown);
-        setPlanningBreakdown(demoData.planningBreakdown);
-        setSprintHistory(demoData.sprintHistory);
+      setKpiCards(data.kpiCards);
+      setSprintFocus(data.sprintFocus);
+      setWorkBreakdown(data.workBreakdown);
+      setPlanningBreakdown(data.planningBreakdown);
+      setSprintHistory(data.sprintHistory);
 
 
-        setHasData(true);
-        setIsLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setIsError(true);
-        setIsLoading(false);
-      });
+      setHasData(true);
+      setIsLoading(false);
+    }).catch(err => {
+      console.error(err);
+      setIsError(true);
+      setIsLoading(false);
+    });
   }, [token, database])
 
   if (!hasData && !isLoading) {
@@ -311,7 +487,15 @@ export default function Example() {
 
   if (isLoading) {
     return (
-      <>loading</>
+      <div className='flex items-center justify-center h-screen bg-gray-200'>
+        <div
+          style={{ width: '20rem', height: '20rem' }}
+          className="animate-spin">
+          <div className="h-full w-full border-4 border-t-purple-500
+      border-b-purple-700 rounded-[50%]">
+          </div>
+        </div>
+      </div>
     )
   }
 
